@@ -3,7 +3,10 @@
     "allow": [
       "mcp__plugin_agentmemory_agentmemory__memory_smart_search",
       "mcp__plugin_agentmemory_agentmemory__memory_save",
-      "mcp__plugin_agentmemory_agentmemory__memory_recall"
+      "mcp__plugin_agentmemory_agentmemory__memory_recall",
+      "mcp__plugin_agentmemory_agentmemory__memory_sessions",
+      "mcp__plugin_agentmemory_agentmemory__memory_export",
+      "WebFetch(domain:localhost)"
     ]
   }
 }

@@ -35,9 +35,7 @@ const ThreeView = (function () {
   const HEAD_L  = 0.08;
   const MAX_ARROWS = 6000;
 
-  function getParamsObj(p) {
-    return { epsilon1: p.epsilon1, epsilon2: p.epsilon2, charge: p.charge, chargePos: p.chargePos };
-  }
+  function getParamsObj(p) { return p; }
 
   // ====== Trace + collect arrow positions/directions ======
   function collectArrows(params, y0Only) {

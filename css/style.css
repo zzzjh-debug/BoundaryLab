@@ -49,6 +49,21 @@ html, body { height: 100%; font-family: "Segoe UI", system-ui, sans-serif; backg
 .field.checkbox label { display: flex; justify-content: flex-start; gap: 8px; font-size: 13px; cursor: pointer; }
 .field.checkbox input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
 
+/* ====== Model Selector Radio Group ====== */
+.radio-group { display: flex; flex-direction: column; gap: 6px; }
+.radio-label {
+  display: flex !important; align-items: center; justify-content: flex-start !important; gap: 8px;
+  padding: 6px 10px; border-radius: 6px;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-size: 13px !important; color: var(--text) !important;
+}
+.radio-label:hover { border-color: var(--accent); background: rgba(88,166,255,0.05); }
+.radio-label:has(input:checked) { border-color: var(--accent); background: rgba(88,166,255,0.10); }
+.radio-label input[type="radio"] { accent-color: var(--accent); cursor: pointer; margin: 0; }
+.radio-label span { line-height: 1.3; }
+.radio-label sub { color: var(--text-dim); }
+
 /* ====== Probe Info ====== */
 #probe-info { margin-top: auto; }
 #probe-values .hint { font-size: 12px; color: var(--text-dim); font-style: italic; }
@@ -79,6 +94,9 @@ html, body { height: 100%; font-family: "Segoe UI", system-ui, sans-serif; backg
 .hm-card:last-child { border-bottom: none; }
 .hm-card canvas { flex: 1; width: 100%; min-height: 0; aspect-ratio: auto; }
 .hm-title  { font-size: 11px; color: #fff; margin-top: 4px; text-align: center; }
+.hm-row { display: flex; flex: 1; width: 100%; min-height: 0; gap: 4px; }
+.hm-row canvas:first-child { flex: 1; min-width: 0; }
+.hm-colorbar { width: 14px !important; min-width: 14px !important; flex: none !important; }
 .hm-rule   { font-size: 10px; color: var(--accent2); text-align: center; margin-bottom: 2px; }
 
 /* ====== Profile Charts ====== */

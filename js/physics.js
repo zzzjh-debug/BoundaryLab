@@ -1,50 +1,64 @@
 /**
- * Physics Engine — Method of Images for point charge above dielectric interface.
+ * Physics Engine — multi-model electrostatic boundary-value solver.
  *
- * Region 1 (z > 0, ε₁): φ = (1/(4πε₁)) [q/R + q'/R']
- *   where q' = q·(ε₁-ε₂)/(ε₁+ε₂)  (image charge below interface)
- * Region 2 (z < 0, ε₂): φ = (1/(4πε₂)) [q''/R]
- *   where q'' = q·2ε₂/(ε₁+ε₂)      (transmitted charge)
+ * Three models, all using the Method of Images (or superposition thereof):
+ *
+ *   Model 1 "dielectric" — Point charge above a planar dielectric interface
+ *     Region 1 (z > 0, ε₁):
+ *       φ = (1/(4πε₁)) [q/R + q'/R']
+ *       q' = q·(ε₁−ε₂)/(ε₁+ε₂)  (image below interface)
+ *     Region 2 (z < 0, ε₂):
+ *       φ = (1/(4πε₂)) [q''/R]
+ *       q'' = q·2ε₂/(ε₁+ε₂)      (transmitted charge)
+ *     BC: φ₁=φ₂, D₁ₙ=D₂ₙ (σ_f=0), E₁ₙ/E₂ₙ=ε₂/ε₁
+ *
+ *   Model 2 "conductor" — Point charge above a grounded conducting plane
+ *     Region 1 (z > 0, ε₁):
+ *       φ = (1/(4πε₁)) [q/R − q/R']
+ *       Image charge −q at mirror position.
+ *     Region 2 (z < 0):  φ = 0, E = 0  (electrostatic equilibrium)
+ *     BC: φ(z=0)=0 (Dirichlet), induced σ = −ε₁·∂φ/∂z|_{0⁺}
+ *
+ *   Model 3 "charged" — Point charge above dielectric interface with free σ_f
+ *     Same image solution as Model 1, plus uniform sheet field from σ_f:
+ *       z > 0: E_z += σ_f/(2ε₁),  D_z += σ_f/2
+ *       z < 0: E_z += −σ_f/(2ε₂), D_z += −σ_f/2
+ *     BC: φ₁=φ₂, D₁ₙ−D₂ₙ=σ_f (general form), E₁ₜ=E₂ₜ
  *
  * Normal = z-direction, Tangential = x-y plane.
  */
 
 const Physics = (function () {
   const ONE_OVER_4PI = 1 / (4 * Math.PI);
+  const RMIN = 0.02;
+
+  let _activeModel = "dielectric";
+
+  // ─── Model Implementations ────────────────────────────────────────
 
   /**
-   * Compute field at a single point.
-   * @param {number} x, y, z — observation point
-   * @param {{epsilon1, epsilon2, charge, chargePos: {x,y,z}}} p
-   * @returns {{phi, Ex, Ey, Ez, Dx, Dy, Dz}}
+   * Model 1: Point charge + planar dielectric interface (σ_f = 0).
    */
-  function computeField(x, y, z, p) {
+  function _computeDielectric(x, y, z, p) {
     const { epsilon1, epsilon2, charge: q, chargePos: cp } = p;
     const dx = x - cp.x;
     const dy = y - cp.y;
     const dz = z - cp.z;
     const R = Math.sqrt(dx * dx + dy * dy + dz * dz);
-
-    // Guard against singularity at charge position
-    const Rmin = 0.02;
-    const Reff = Math.max(R, Rmin);
+    const Reff = Math.max(R, RMIN);
 
     let phi, Ex, Ey, Ez, eps;
 
     if (z >= 0) {
-      // Region 1: real charge + image charge
       eps = epsilon1;
       const alpha = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
-
-      // Image charge at (cp.x, cp.y, -cp.z)
       const dzImg = z + cp.z;
       const Rimg = Math.sqrt(dx * dx + dy * dy + dzImg * dzImg);
-      const RimgEff = Math.max(Rimg, Rmin);
+      const RimgEff = Math.max(Rimg, RMIN);
 
       const coeff = q * ONE_OVER_4PI / epsilon1;
       phi = coeff * (1 / Reff + alpha / RimgEff);
 
-      // E = -grad φ
       const dPhi_dx = -coeff * (dx / (Reff * Reff * Reff) + alpha * dx / (RimgEff * RimgEff * RimgEff));
       const dPhi_dy = -coeff * (dy / (Reff * Reff * Reff) + alpha * dy / (RimgEff * RimgEff * RimgEff));
       const dPhi_dz = -coeff * (dz / (Reff * Reff * Reff) + alpha * dzImg / (RimgEff * RimgEff * RimgEff));
@@ -53,7 +67,6 @@ const Physics = (function () {
       Ey = -dPhi_dy;
       Ez = -dPhi_dz;
     } else {
-      // Region 2: transmitted charge only
       eps = epsilon2;
       const beta = (2 * epsilon2) / (epsilon1 + epsilon2);
 
@@ -66,25 +79,182 @@ const Physics = (function () {
       Ez = -common * dz;
     }
 
-    const Dx = eps * Ex;
-    const Dy = eps * Ey;
-    const Dz = eps * Ez;
-
-    return { phi, Ex, Ey, Ez, Dx, Dy, Dz };
+    return { phi, Ex, Ey, Ez, Dx: eps * Ex, Dy: eps * Ey, Dz: eps * Ez };
   }
 
   /**
-   * Sample field along a vertical line (x=x0, y=y0) from zMin to zMax.
-   * @returns {Array<{z, phi, En, Dn, Et, Dt}>}
+   * Model 2: Point charge above a grounded conducting plane (z=0).
+   *
+   *   z ≥ 0: φ = (q/(4πε₁))·[1/R − 1/R']
+   *   z < 0: φ = 0, E = 0
+   *
+   * Induced surface charge density on the plane:
+   *   σ(x,y) = −ε₁·∂φ/∂z|_{z=0⁺} = −q·z₀ / [2π((x−x₀)²+(y−y₀)²+z₀²)^(3/2)]
+   *   ∫σ dA = −q  (total induced charge equals −q)
    */
+  function _computeConductor(x, y, z, p) {
+    const { epsilon1, charge: q, chargePos: cp } = p;
+    const dx = x - cp.x;
+    const dy = y - cp.y;
+    const dz = z - cp.z;
+
+    // Below the conductor plane: field is zero (electrostatic equilibrium)
+    if (z < 0) {
+      return { phi: 0, Ex: 0, Ey: 0, Ez: 0, Dx: 0, Dy: 0, Dz: 0 };
+    }
+
+    const R = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const Reff = Math.max(R, RMIN);
+
+    const dzImg = z + cp.z;
+    const Rimg = Math.sqrt(dx * dx + dy * dy + dzImg * dzImg);
+    const RimgEff = Math.max(Rimg, RMIN);
+
+    const coeff = q * ONE_OVER_4PI / epsilon1;
+    const phi = coeff * (1 / Reff - 1 / RimgEff);
+
+    // E = −∇φ
+    // ∂φ/∂x = coeff·[−dx/R³ + dx/R'³]  → Ex = coeff·[dx/R³ − dx/R'³]
+    const dPhi_dx = -coeff * (dx / (Reff * Reff * Reff) - dx / (RimgEff * RimgEff * RimgEff));
+    const dPhi_dy = -coeff * (dy / (Reff * Reff * Reff) - dy / (RimgEff * RimgEff * RimgEff));
+    const dPhi_dz = -coeff * (dz / (Reff * Reff * Reff) - dzImg / (RimgEff * RimgEff * RimgEff));
+
+    const Ex = -dPhi_dx;
+    const Ey = -dPhi_dy;
+    const Ez = -dPhi_dz;
+
+    return { phi, Ex, Ey, Ez, Dx: epsilon1 * Ex, Dy: epsilon1 * Ey, Dz: epsilon1 * Ez };
+  }
+
+  /**
+   * Model 3: Point charge above dielectric interface with free surface charge σ_f.
+   *
+   * Total field = image-charge solution (Model 1) + uniform sheet field from σ_f.
+   *
+   * The uniform sheet at z=0 with free charge σ_f contributes:
+   *   z > 0:  E_z^σ = +σ_f/(2ε₁),  D_z^σ = +σ_f/2,   φ^σ = −σ_f·z/(2ε₁)
+   *   z < 0:  E_z^σ = −σ_f/(2ε₂),  D_z^σ = −σ_f/2,   φ^σ = +σ_f·z/(2ε₂)
+   *
+   * BC check: D₁ₙ(0⁺) − D₂ₙ(0⁻) = σ_f  ✓
+   */
+  function _computeCharged(x, y, z, p) {
+    const { epsilon1, epsilon2, sigma_f, charge: q, chargePos: cp } = p;
+    const dx = x - cp.x;
+    const dy = y - cp.y;
+    const dz = z - cp.z;
+    const R = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const Reff = Math.max(R, RMIN);
+
+    let phi, Ex, Ey, Ez, eps;
+
+    if (z >= 0) {
+      eps = epsilon1;
+      const alpha = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
+      const dzImg = z + cp.z;
+      const Rimg = Math.sqrt(dx * dx + dy * dy + dzImg * dzImg);
+      const RimgEff = Math.max(Rimg, RMIN);
+
+      const coeff = q * ONE_OVER_4PI / epsilon1;
+      // Image solution
+      phi = coeff * (1 / Reff + alpha / RimgEff) - sigma_f * z / (2 * epsilon1);
+
+      const dPhi_dx = -coeff * (dx / (Reff * Reff * Reff) + alpha * dx / (RimgEff * RimgEff * RimgEff));
+      const dPhi_dy = -coeff * (dy / (Reff * Reff * Reff) + alpha * dy / (RimgEff * RimgEff * RimgEff));
+      const dPhi_dz_img = -coeff * (dz / (Reff * Reff * Reff) + alpha * dzImg / (RimgEff * RimgEff * RimgEff));
+
+      Ex = -dPhi_dx;
+      Ey = -dPhi_dy;
+      Ez = -dPhi_dz_img + sigma_f / (2 * epsilon1);
+    } else {
+      eps = epsilon2;
+      const beta = (2 * epsilon2) / (epsilon1 + epsilon2);
+
+      const coeff = q * ONE_OVER_4PI / epsilon2;
+      phi = coeff * beta / Reff + sigma_f * z / (2 * epsilon2);
+
+      const common = -coeff * beta / (Reff * Reff * Reff);
+      Ex = -common * dx;
+      Ey = -common * dy;
+      Ez = -common * dz - sigma_f / (2 * epsilon2);
+    }
+
+    return { phi, Ex, Ey, Ez, Dx: eps * Ex, Dy: eps * Ey, Dz: eps * Ez };
+  }
+
+  // ─── Model Registry ───────────────────────────────────────────────
+
+  const models = {
+    dielectric: {
+      id: "dielectric",
+      name: "点电荷 + 介质分界面",
+      subtitle: "镜像法 · 无自由面电荷",
+      params: ["epsilon1", "epsilon2", "charge", "chargePos"],
+      computeField: _computeDielectric,
+      chartSubtitles: {
+        phi: "φ 在 z=0 处连续",
+        en:  "Eₙ 在 z=0 处跳变，比值 = ε₂/ε₁",
+        dn:  "Dₙ 在 z=0 处连续（无自由电荷）",
+      },
+    },
+    conductor: {
+      id: "conductor",
+      name: "点电荷 + 接地导体平面",
+      subtitle: "镜像法 · Dirichlet 边值条件",
+      params: ["epsilon1", "charge", "chargePos"],
+      computeField: _computeConductor,
+      chartSubtitles: {
+        phi: "φ 在 z=0 处为零（接地 Dirichlet BC）",
+        en:  "Eₙ 在导体内部为零（静电平衡）",
+        dn:  "Dₙ 在导体内部为零",
+      },
+    },
+    charged: {
+      id: "charged",
+      name: "点电荷 + 介质分界面（含 σ_f）",
+      subtitle: "镜像法 + 均匀带电面 · 一般 Dₙ 跳变条件",
+      params: ["epsilon1", "epsilon2", "sigma_f", "charge", "chargePos"],
+      computeField: _computeCharged,
+      chartSubtitles: {
+        phi: "φ 在 z=0 处连续",
+        en:  "Eₙ 在 z=0 处跳变",
+        dn:  "Dₙ 在 z=0 处跳变 = σ_f（一般形式）",
+      },
+    },
+  };
+
+  // ─── Public API ───────────────────────────────────────────────────
+
+  function setModel(id) {
+    if (models[id]) _activeModel = id;
+  }
+
+  function getModel() {
+    return _activeModel;
+  }
+
+  function getModelMeta(id) {
+    const m = models[id || _activeModel];
+    return { id: m.id, name: m.name, subtitle: m.subtitle, params: m.params, chartSubtitles: m.chartSubtitles };
+  }
+
+  function getAllModels() {
+    return Object.keys(models).map(function (k) {
+      return { id: k, name: models[k].name, subtitle: models[k].subtitle };
+    });
+  }
+
+  function computeField(x, y, z, p) {
+    return models[_activeModel].computeField(x, y, z, p);
+  }
+
   function sampleProfile(x0, y0, zMin, zMax, nPts, p) {
-    const dz = (zMax - zMin) / (nPts - 1);
-    const data = [];
-    for (let i = 0; i < nPts; i++) {
-      const z = zMin + i * dz;
-      const f = computeField(x0, y0, z, p);
+    var dz = (zMax - zMin) / (nPts - 1);
+    var data = [];
+    for (var i = 0; i < nPts; i++) {
+      var z = zMin + i * dz;
+      var f = computeField(x0, y0, z, p);
       data.push({
-        z,
+        z: z,
         phi: f.phi,
         En: f.Ez,
         Dn: f.Dz,
@@ -95,29 +265,32 @@ const Physics = (function () {
     return data;
   }
 
-  /**
-   * Compute field on a 2D grid in the y=0 (or x=0) plane.
-   * @returns {Array<Array<{x,z,phi,Ex,Ey,Ez,Dx,Dy,Dz}>>}
-   */
-  function sampleSlice(planeConst, planeVar1Min, planeVar1Max, planeVar2Min, planeVar2Max, n1, n2, p) {
-    const result = [];
-    const dv1 = (planeVar1Max - planeVar1Min) / (n1 - 1);
-    const dv2 = (planeVar2Max - planeVar2Min) / (n2 - 1);
-    for (let i = 0; i < n1; i++) {
-      const row = [];
-      const v1 = planeVar1Min + i * dv1;
-      for (let j = 0; j < n2; j++) {
-        const v2 = planeVar2Min + j * dv2;
-        // Hardcoded for y=0 slice: v1=x, v2=z
-        const f = computeField(v1, 0, v2, p);
-        row.push({ x: v1, z: v2, ...f });
+  function sampleSlice(v1Min, v1Max, v2Min, v2Max, n1, n2, p) {
+    var result = [];
+    var dv1 = (v1Max - v1Min) / (n1 - 1);
+    var dv2 = (v2Max - v2Min) / (n2 - 1);
+    for (var i = 0; i < n1; i++) {
+      var row = [];
+      var v1 = v1Min + i * dv1;
+      for (var j = 0; j < n2; j++) {
+        var v2 = v2Min + j * dv2;
+        var f = computeField(v1, 0, v2, p);
+        row.push({ x: v1, z: v2, phi: f.phi, Ex: f.Ex, Ey: f.Ey, Ez: f.Ez, Dx: f.Dx, Dy: f.Dy, Dz: f.Dz });
       }
       result.push(row);
     }
     return result;
   }
 
-  return { computeField, sampleProfile, sampleSlice };
+  return {
+    setModel: setModel,
+    getModel: getModel,
+    getModelMeta: getModelMeta,
+    getAllModels: getAllModels,
+    computeField: computeField,
+    sampleProfile: sampleProfile,
+    sampleSlice: sampleSlice,
+  };
 })();
 
 window.Physics = Physics;

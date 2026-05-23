@@ -27,12 +27,12 @@ const Probe = (function () {
       }
     });
 
-    view3dCanvas.addEventListener("mouseleave", () => {
+    view3dCanvas.addEventListener("mouseleave", function () {
       if (!enabled) return;
       currentPos = null;
-      const tv = window.ThreeView;
+      var tv = window.ThreeView;
       if (tv) tv.setProbePosition(null);
-      probeValuesEl.innerHTML = '<span class="hint">鼠标悬停 3D 视图</span>';
+      // Keep last probe values displayed so user can scroll the left panel
     });
   }
 
@@ -41,13 +41,7 @@ const Probe = (function () {
     const params = window._appParams;
     if (!P || !params) return;
 
-    const p = {
-      epsilon1: params.epsilon1,
-      epsilon2: params.epsilon2,
-      charge: params.charge,
-      chargePos: params.chargePos,
-    };
-    const f = P.computeField(pos.x, 0, pos.z, p);
+    const f = P.computeField(pos.x, 0, pos.z, params);
     const Et = Math.sqrt(f.Ex * f.Ex + f.Ey * f.Ey);
     const Dt = Math.sqrt(f.Dx * f.Dx + f.Dy * f.Dy);
 

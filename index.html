@@ -12,36 +12,61 @@
   <!-- ====== 左侧：参数控制区 ====== -->
   <aside id="panel">
     <h1>BoundaryLab</h1>
-    <p class="subtitle">点电荷 + 介质分界面</p>
+    <p class="subtitle" id="model-subtitle">点电荷 + 介质分界面</p>
 
-    <section class="group">
-      <h2>介质参数</h2>
-      <div class="field">
-        <label>ε₁ (上半空间) <span class="val" id="val-eps1">1.0</span></label>
-        <input type="range" id="slider-eps1" min="0.5" max="10" step="0.1" value="1.0" />
-      </div>
-      <div class="field">
-        <label>ε₂ (下半空间) <span class="val" id="val-eps2">4.0</span></label>
-        <input type="range" id="slider-eps2" min="0.5" max="10" step="0.1" value="4.0" />
+    <!-- 场景切换 -->
+    <section class="group" id="group-model">
+      <h2>场景切换</h2>
+      <div class="field radio-group" id="model-selector">
+        <label class="radio-label">
+          <input type="radio" name="activeModel" value="dielectric" checked />
+          <span>介质-介质分界面</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="activeModel" value="conductor" />
+          <span>接地导体平面</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="activeModel" value="charged" />
+          <span>带电介质分界面 (σ<sub>f</sub>)</span>
+        </label>
       </div>
     </section>
 
-    <section class="group">
+    <!-- 介质参数 -->
+    <section class="group" id="group-eps">
+      <h2>介质参数</h2>
+      <div class="field" id="field-eps1">
+        <label>&epsilon;<sub>1</sub> (上半空间) <span class="val" id="val-eps1">1.0</span></label>
+        <input type="range" id="slider-eps1" min="0.5" max="10" step="0.1" value="1.0" />
+      </div>
+      <div class="field" id="field-eps2">
+        <label>&epsilon;<sub>2</sub> (下半空间) <span class="val" id="val-eps2">4.0</span></label>
+        <input type="range" id="slider-eps2" min="0.5" max="10" step="0.1" value="4.0" />
+      </div>
+      <div class="field" id="field-sigma" style="display:none">
+        <label>&sigma;<sub>f</sub> (自由面电荷密度) <span class="val" id="val-sigma">0.20</span></label>
+        <input type="range" id="slider-sigma" min="-2" max="2" step="0.05" value="0.20" />
+      </div>
+    </section>
+
+    <!-- 源参数 -->
+    <section class="group" id="group-source">
       <h2>源参数</h2>
-      <div class="field">
+      <div class="field" id="field-q">
         <label>电荷量 q <span class="val" id="val-q">1.0</span></label>
         <input type="range" id="slider-q" min="0.1" max="5" step="0.1" value="1.0" />
       </div>
-      <div class="field">
-        <label>电荷位置 z₀ <span class="val" id="val-z0">1.0</span></label>
+      <div class="field" id="field-z0">
+        <label>电荷位置 z<sub>0</sub> <span class="val" id="val-z0">1.0</span></label>
         <input type="range" id="slider-z0" min="0.1" max="3" step="0.05" value="1.0" />
       </div>
-      <div class="field">
-        <label>电荷位置 x₀ <span class="val" id="val-x0">0.0</span></label>
+      <div class="field" id="field-x0">
+        <label>电荷位置 x<sub>0</sub> <span class="val" id="val-x0">0.0</span></label>
         <input type="range" id="slider-x0" min="-2" max="2" step="0.05" value="0.0" />
       </div>
-      <div class="field">
-        <label>电荷位置 y₀ <span class="val" id="val-y0">0.0</span></label>
+      <div class="field" id="field-y0">
+        <label>电荷位置 y<sub>0</sub> <span class="val" id="val-y0">0.0</span></label>
         <input type="range" id="slider-y0" min="-2" max="2" step="0.05" value="0.0" />
       </div>
     </section>
@@ -73,12 +98,18 @@
       </div>
       <div id="heatmap-panel">
         <div class="hm-card">
-          <canvas id="heatmap-y0"></canvas>
-          <div class="hm-title">φ(x, 0, z) — y=0 竖直切面</div>
+          <div class="hm-row">
+            <canvas id="heatmap-y0"></canvas>
+            <canvas class="hm-colorbar" id="colorbar-y0"></canvas>
+          </div>
+          <div class="hm-title">&phi;(x, 0, z) — y=0 竖直切面</div>
         </div>
         <div class="hm-card">
-          <canvas id="heatmap-z0"></canvas>
-          <div class="hm-title">φ(x, y, 0) — z=0 分界面</div>
+          <div class="hm-row">
+            <canvas id="heatmap-z0"></canvas>
+            <canvas class="hm-colorbar" id="colorbar-z0"></canvas>
+          </div>
+          <div class="hm-title">&phi;(x, y, 0) — z=0 分界面</div>
         </div>
       </div>
     </div>
