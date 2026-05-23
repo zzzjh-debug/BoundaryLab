@@ -2,3 +2,10 @@ node_modules/
 .serve/
 .DS_Store
 Thumbs.db
+
+# 设计文档和截图（仅本地保留）
+设计.md
+势函数边界.png
+DE边界.png
+边值问题的边界.png
+output/
