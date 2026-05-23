@@ -181,6 +181,128 @@ const Physics = (function () {
     return { phi, Ex, Ey, Ez, Dx: eps * Ex, Dy: eps * Ey, Dz: eps * Ez };
   }
 
+  /**
+   * Model 4: Infinite line charge (λ, along y-axis) above a planar dielectric interface.
+   *
+   * 2D problem in x-z plane.  Field is uniform along y (E_y = 0).
+   *
+   *   Region 1 (z > 0, ε₁):
+   *     φ = −(λ/(2πε₁))·[ln(r) + α·ln(r')]
+   *     E_x = (λ/(2πε₁))·[(x−x₀)/r² + α·(x−x₀)/r'²]
+   *     E_z = (λ/(2πε₁))·[(z−z₀)/r² + α·(z+z₀)/r'²]
+   *
+   *   Region 2 (z < 0, ε₂):
+   *     φ = −(λ/(2πε₂))·β·ln(r)
+   *     E_x = (λ/(2πε₂))·β·(x−x₀)/r²
+   *     E_z = (λ/(2πε₂))·β·(z−z₀)/r²
+   *
+   *   r² = (x−x₀)² + (z−z₀)²,  r'² = (x−x₀)² + (z+z₀)²
+   *   α = (ε₁−ε₂)/(ε₁+ε₂),  β = 2ε₂/(ε₁+ε₂)
+   *
+   *   BC: φ continuous, Dₙ continuous (σ_f=0), Eₙ ratio = ε₂/ε₁
+   *   Field decays as 1/r (vs 1/r² for point charge).
+   */
+  function _computeLineCharge(x, y, z, p) {
+    const { epsilon1, epsilon2, charge: lambda, chargePos: cp } = p;
+    const dx = x - cp.x;
+    const dz = z - cp.z;
+    const r2 = dx * dx + dz * dz;
+    const r = Math.sqrt(r2);
+    const rEff = Math.max(r, RMIN);
+
+    let phi, Ex, Ez, eps;
+
+    if (z >= 0) {
+      eps = epsilon1;
+      const alpha = (epsilon1 - epsilon2) / (epsilon1 + epsilon2);
+      const dzImg = z + cp.z;
+      const rImg2 = dx * dx + dzImg * dzImg;
+      const rImg = Math.sqrt(rImg2);
+      const rImgEff = Math.max(rImg, RMIN);
+
+      const coeff = lambda / (2 * Math.PI * epsilon1);
+      phi = -coeff * (Math.log(rEff) + alpha * Math.log(rImgEff));
+
+      Ex = coeff * (dx / (rEff * rEff) + alpha * dx / (rImgEff * rImgEff));
+      Ez = coeff * (dz / (rEff * rEff) + alpha * dzImg / (rImgEff * rImgEff));
+    } else {
+      eps = epsilon2;
+      const beta = (2 * epsilon2) / (epsilon1 + epsilon2);
+
+      const coeff = lambda / (2 * Math.PI * epsilon2);
+      phi = -coeff * beta * Math.log(rEff);
+
+      Ex = coeff * beta * dx / (rEff * rEff);
+      Ez = coeff * beta * dz / (rEff * rEff);
+    }
+
+    return { phi, Ex, Ey: 0, Ez, Dx: eps * Ex, Dy: 0, Dz: eps * Ez };
+  }
+
+  /**
+   * Model 5: Point current source I above a planar conductivity interface.
+   *
+   * Mathematically dual to electrostatics (Model 1):
+   *   ε → σ,  q → I,  D → J
+   *
+   *   Region 1 (z > 0, σ₁):
+   *     φ = (I/(4πσ₁))·[1/R + α/R']
+   *     J₁ = σ₁E₁
+   *
+   *   Region 2 (z < 0, σ₂):
+   *     φ = (I/(4πσ₂))·β/R
+   *     J₂ = σ₂E₂
+   *
+   *   α = (σ₁−σ₂)/(σ₁+σ₂),  β = 2σ₂/(σ₁+σ₂)
+   *
+   *   BC: φ continuous, Jₙ continuous (no current source at interface),
+   *       Eₙ ratio = σ₂/σ₁,  Eₜ continuous,  Jₜ ratio = σ₁/σ₂
+   *   Refraction: tanθ₁/tanθ₂ = σ₁/σ₂
+   */
+  function _computeCurrent(x, y, z, p) {
+    const { epsilon1: sigma1, epsilon2: sigma2, charge: I, chargePos: cp } = p;
+    const dx = x - cp.x;
+    const dy = y - cp.y;
+    const dz = z - cp.z;
+    const R = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    const Reff = Math.max(R, RMIN);
+
+    let phi, Ex, Ey, Ez, sigma;
+
+    if (z >= 0) {
+      sigma = sigma1;
+      const alpha = (sigma1 - sigma2) / (sigma1 + sigma2);
+      const dzImg = z + cp.z;
+      const Rimg = Math.sqrt(dx * dx + dy * dy + dzImg * dzImg);
+      const RimgEff = Math.max(Rimg, RMIN);
+
+      const coeff = I * ONE_OVER_4PI / sigma1;
+      phi = coeff * (1 / Reff + alpha / RimgEff);
+
+      const dPhi_dx = -coeff * (dx / (Reff * Reff * Reff) + alpha * dx / (RimgEff * RimgEff * RimgEff));
+      const dPhi_dy = -coeff * (dy / (Reff * Reff * Reff) + alpha * dy / (RimgEff * RimgEff * RimgEff));
+      const dPhi_dz = -coeff * (dz / (Reff * Reff * Reff) + alpha * dzImg / (RimgEff * RimgEff * RimgEff));
+
+      Ex = -dPhi_dx;
+      Ey = -dPhi_dy;
+      Ez = -dPhi_dz;
+    } else {
+      sigma = sigma2;
+      const beta = (2 * sigma2) / (sigma1 + sigma2);
+
+      const coeff = I * ONE_OVER_4PI / sigma2;
+      phi = coeff * beta / Reff;
+
+      const common = -coeff * beta / (Reff * Reff * Reff);
+      Ex = -common * dx;
+      Ey = -common * dy;
+      Ez = -common * dz;
+    }
+
+    // J = σE (dual to D = εE)
+    return { phi, Ex, Ey, Ez, Dx: sigma * Ex, Dy: sigma * Ey, Dz: sigma * Ez };
+  }
+
   // ─── Model Registry ───────────────────────────────────────────────
 
   const models = {
@@ -219,6 +341,33 @@ const Physics = (function () {
         en:  "Eₙ 在 z=0 处跳变",
         dn:  "Dₙ 在 z=0 处跳变 = σ_f（一般形式）",
       },
+      uiLabels: { epsSection: "介质参数", eps1: "ε₁ (上半空间)", eps2: "ε₂ (下半空间)", source: "电荷量 q" },
+    },
+    linecharge: {
+      id: "linecharge",
+      name: "线电荷 + 介质分界面",
+      subtitle: "镜像法 · 2D 对数势 · 场衰减 1/r",
+      params: ["epsilon1", "epsilon2", "charge", "chargePos"],
+      computeField: _computeLineCharge,
+      chartSubtitles: {
+        phi: "φ 在 z=0 处连续（对数势 ln r）",
+        en:  "Eₙ 在 z=0 处跳变，比值 = ε₂/ε₁（场 ~ 1/r）",
+        dn:  "Dₙ 在 z=0 处连续（无自由电荷）",
+      },
+      uiLabels: { epsSection: "介质参数", eps1: "ε₁ (上半空间)", eps2: "ε₂ (下半空间)", source: "线电荷密度 λ" },
+    },
+    current: {
+      id: "current",
+      name: "稳恒电流 + 电导率分界面",
+      subtitle: "镜像法 · 静电-稳恒对偶 · ε↔σ  D↔J",
+      params: ["epsilon1", "epsilon2", "charge", "chargePos"],
+      computeField: _computeCurrent,
+      chartSubtitles: {
+        phi: "φ 在 z=0 处连续（电压连续）",
+        en:  "Eₙ 在 z=0 处跳变，比值 = σ₂/σ₁",
+        dn:  "Jₙ 在 z=0 处连续（无电流源 at 界面）",
+      },
+      uiLabels: { epsSection: "电导率参数", eps1: "σ₁ (上半空间)", eps2: "σ₂ (下半空间)", source: "电流强度 I" },
     },
   };
 
@@ -234,7 +383,7 @@ const Physics = (function () {
 
   function getModelMeta(id) {
     const m = models[id || _activeModel];
-    return { id: m.id, name: m.name, subtitle: m.subtitle, params: m.params, chartSubtitles: m.chartSubtitles };
+    return { id: m.id, name: m.name, subtitle: m.subtitle, params: m.params, chartSubtitles: m.chartSubtitles, uiLabels: m.uiLabels };
   }
 
   function getAllModels() {

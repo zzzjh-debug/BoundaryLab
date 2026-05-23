@@ -22,7 +22,12 @@ import * as THREE from "three";
     dielectric:  ["epsilon1", "epsilon2",             "charge", "chargePos"],
     conductor:   ["epsilon1",                         "charge", "chargePos"],
     charged:     ["epsilon1", "epsilon2", "sigma_f", "charge", "chargePos"],
+    linecharge:  ["epsilon1", "epsilon2",             "charge", "chargePos"],
+    current:     ["epsilon1", "epsilon2",             "charge", "chargePos"],
   };
+
+  // Models where y₀ is meaningless (line charge is infinite along y)
+  const MODELS_NO_Y0 = { linecharge: true };
 
   function applyModelVisibility(modelId) {
     var vis = MODEL_PARAMS[modelId] || MODEL_PARAMS.dielectric;
@@ -30,6 +35,18 @@ import * as THREE from "three";
     show("field-eps1",  vis.indexOf("epsilon1") >= 0);
     show("field-eps2",  vis.indexOf("epsilon2") >= 0);
     show("field-sigma", vis.indexOf("sigma_f") >= 0);
+    show("field-y0",    !MODELS_NO_Y0[modelId]);
+
+    // Update labels to match model physics
+    var meta = Physics.getModelMeta(modelId);
+    var labels = meta.uiLabels;
+    if (labels) {
+      var el;
+      el = document.getElementById("lbl-eps-section"); if (el) el.textContent = labels.epsSection;
+      el = document.getElementById("lbl-eps1-text"); if (el) el.textContent = labels.eps1;
+      el = document.getElementById("lbl-eps2-text"); if (el) el.textContent = labels.eps2;
+      el = document.getElementById("lbl-q-text"); if (el) el.textContent = labels.source;
+    }
   }
 
   // ====== Helpers ======
@@ -218,6 +235,7 @@ import * as THREE from "three";
   function boot() {
     if (typeof Physics === "undefined" || typeof Profiles === "undefined" || typeof Probe === "undefined") return;
     Physics.setModel(activeModel);
+    applyModelVisibility(activeModel);
     try { Profiles.init(); var meta = Physics.getModelMeta(); Profiles.setSubtitles(meta.chartSubtitles); updateProfiles(); } catch (e) { console.error(e); }
     try { updateHeatmaps(); } catch (e) { console.error(e); }
 
