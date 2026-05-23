@@ -15,6 +15,30 @@ npx serve .
 
 无需安装任何依赖，纯静态 HTML + CSS + JS，CDN 加载 Three.js 和 Chart.js。
 
+## 部署与更新
+
+项目托管在 GitHub Pages，域名 `zzzjh-debug.github.io/BoundryLab`。当前机器已配置 SSH 免密推送（`~/.ssh/id_ed25519_boundrylab`）。
+
+**修改后更新网站：**
+```bash
+cd "/c/Users/zjh20/Desktop/桌面待办/边界实验室"
+git add -A
+git commit -m "描述你的改动"
+git push
+```
+
+推送后约 1 分钟自动部署到线上，刷新链接即可看到更新。
+
+**首次在新电脑上部署：**
+1. `git clone git@github.com:zzzjh-debug/BoundryLab.git`
+2. 如无法 SSH 连接 GitHub，在 `~/.ssh/config` 中添加：
+   ```
+   Host github.com
+       HostName ssh.github.com
+       Port 443
+       User git
+   ```
+
 ## 项目结构
 
 ```
