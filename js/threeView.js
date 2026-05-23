@@ -9,7 +9,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 const ThreeView = (function () {
   let renderer, scene, camera, controls;
   let container, canvas;
-  let chargeSphere, probeSphere, lineSource, currentSphere;
+  let chargeSphere, probeSphere, lineSource, currentSphere, dielectricSphere;
   let eShafts, eHeads;
   let animFrameId, resizeObserver;
   let _initialized = false;
@@ -38,7 +38,7 @@ const ThreeView = (function () {
   function getParamsObj(p) { return p; }
 
   // ====== Trace + collect arrow positions/directions ======
-  function collectArrows(params, y0Only) {
+  function collectArrows(params, y0Only, modelId) {
     const P = window.Physics;
     if (!P) return [];
     const p = getParamsObj(params);
@@ -61,6 +61,26 @@ const ThreeView = (function () {
 
     // Filter to y=0 plane only if requested
     const filtered = y0Only ? seeds.filter(s => Math.abs(s.y) < 0.01) : seeds;
+
+	    // Sphere model: seeds on sphere surface
+	    if (modelId === "sphere") {
+	      const sphereSeeds = [];
+	      const a = 1.0;
+	      const nSph = 36;
+	      // Outside seeds (r = a + δ)
+	      for (let i = 0; i < nSph; i++) {
+	        const ang = (i / nSph) * Math.PI * 2;
+	        sphereSeeds.push(new THREE.Vector3((a + 0.06) * Math.cos(ang), 0, (a + 0.06) * Math.sin(ang)));
+	      }
+	      // Inside seeds (r = a - δ)
+	      for (let i = 0; i < nSph; i++) {
+	        const ang = (i / nSph) * Math.PI * 2 + Math.PI / nSph;
+	        sphereSeeds.push(new THREE.Vector3((a - 0.06) * Math.cos(ang), 0, (a - 0.06) * Math.sin(ang)));
+	      }
+	      seeds.length = 0;
+	      seeds.push.apply(seeds, sphereSeeds);
+	    }
+
 
     const arrows = [];
     for (const seed of filtered) {
@@ -102,14 +122,14 @@ const ThreeView = (function () {
   }
 
   // ====== Build InstancedMesh arrows ======
-  function buildFieldArrows(params, showE, y0Only) {
+  function buildFieldArrows(params, showE, y0Only, modelId) {
     [eShafts, eHeads].forEach((m) => {
       if (m) { m.geometry.dispose(); m.material.dispose(); scene.remove(m); }
     });
 
     if (!showE) { eShafts = null; eHeads = null; return; }
 
-    const arrows = collectArrows(params, y0Only);
+    const arrows = collectArrows(params, y0Only, modelId);
     const count = Math.min(arrows.length, MAX_ARROWS);
     if (count === 0) return;
 
@@ -259,6 +279,11 @@ const ThreeView = (function () {
     currentSphere = new THREE.Mesh(curGeo, new THREE.MeshPhongMaterial({ color: 0xf0c030, emissive: 0x804000 }));
     currentSphere.visible = false; scene.add(currentSphere);
 
+	    // Dielectric sphere mesh (Model 6) -- hidden by default
+	    const dsGeo = new THREE.SphereGeometry(1.0, 48, 48);
+	    dielectricSphere = new THREE.Mesh(dsGeo, new THREE.MeshPhongMaterial({ color: 0x4488aa, emissive: 0x001020, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false }));
+	    dielectricSphere.visible = false; scene.add(dielectricSphere);
+
     const pGeo = new THREE.SphereGeometry(0.06, 12, 12);
     probeSphere = new THREE.Mesh(pGeo, new THREE.MeshPhongMaterial({ color: 0xffff00, emissive: 0x404000 }));
     probeSphere.visible = false; scene.add(probeSphere);
@@ -289,7 +314,7 @@ const ThreeView = (function () {
     chargeSphere.position.set(params.chargePos.x, params.chargePos.y, params.chargePos.z);
     if (lineSource) lineSource.position.set(params.chargePos.x, params.chargePos.y, params.chargePos.z);
     if (currentSphere) currentSphere.position.set(params.chargePos.x, params.chargePos.y, params.chargePos.z);
-    buildFieldArrows(params, true, opts.y0Only);
+    buildFieldArrows(params, true, opts.y0Only, opts.modelId);
   }
 
   function intersectY0(mouseNDC) {
@@ -306,7 +331,12 @@ const ThreeView = (function () {
     else { probeSphere.visible = false; }
   }
 
-  function setSourceStyle(modelId) {
+  function setDielectricSphere(visible) {
+	    if (!_initialized || !dielectricSphere) return;
+	    dielectricSphere.visible = visible;
+	  }
+
+	  function setSourceStyle(modelId) {
     if (!_initialized) return;
     chargeSphere.visible = false;
     if (lineSource) lineSource.visible = false;
@@ -320,7 +350,7 @@ const ThreeView = (function () {
     }
   }
 
-  return { init, update, intersectY0, setProbePosition, setSourceStyle };
+  return { init, update, intersectY0, setProbePosition, setSourceStyle, setDielectricSphere };
 })();
 
 window.ThreeView = ThreeView;

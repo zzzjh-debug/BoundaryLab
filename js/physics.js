@@ -303,6 +303,70 @@ const Physics = (function () {
     return { phi, Ex, Ey, Ez, Dx: sigma * Ex, Dy: sigma * Ey, Dz: sigma * Ez };
   }
 
+  /**
+   * Model 6: Uniform electric field E₀ (along +z) applied to a dielectric sphere.
+   *
+   * Sphere: radius a, permittivity ε_in, centered at origin.
+   * Medium: permittivity ε_out.
+   *
+   * Analytic solution (Legendre expansion, dipole term):
+   *
+   *   Inside (r < a):
+   *     φ_in = −K·E₀·z          where K = 3ε_out/(ε_in+2ε_out)
+   *     E_in = K·E₀ ẑ           (UNIFORM — special property of spherical geometry)
+   *
+   *   Outside (r ≥ a):
+   *     φ_out = −E₀·z + C·E₀·a³·z/r³    where C = (ε_in−ε_out)/(ε_in+2ε_out)
+   *     E = uniform field + z-oriented dipole at origin
+   *       E_x = 3C·E₀·a³·x·z/r⁵
+   *       E_y = 3C·E₀·a³·y·z/r⁵
+   *       E_z = E₀ + C·E₀·a³·(3z²−r²)/r⁵
+   *
+   *   D = εE (ε_in inside, ε_out outside)
+   *
+   *   BC at r=a: φ continuous, D_r continuous  ✓
+   *   Depolarization factor L = 1/3 (sphere)
+   */
+  function _computeSphere(x, y, z, p) {
+    const epsIn = p.epsilon1;   // ε_in
+    const epsOut = p.epsilon2;  // ε_out
+    const E0 = p.charge || 1.0; // applied field strength
+    const a = 1.0;              // sphere radius (fixed)
+
+    const r = Math.sqrt(x * x + y * y + z * z);
+
+    if (r < a) {
+      // Inside: uniform field
+      const K = 3 * epsOut / (epsIn + 2 * epsOut);
+      const Ez = K * E0;
+      return {
+        phi: -K * E0 * z,
+        Ex: 0, Ey: 0, Ez: Ez,
+        Dx: 0, Dy: 0, Dz: epsIn * Ez,
+      };
+    }
+
+    // Outside: uniform + dipole
+    const C = (epsIn - epsOut) / (epsIn + 2 * epsOut);
+    const a3 = a * a * a;
+    const r2 = r * r;
+    const r5 = r2 * r2 * r; // r^5 = r^2 * r^2 * r
+    const rEff = Math.max(r, 0.02);
+    const rEff5 = rEff * rEff * rEff * rEff * rEff;
+
+    const dipoleFactor = C * E0 * a3 / rEff5;
+
+    const Ex = 3 * dipoleFactor * x * z;
+    const Ey = 3 * dipoleFactor * y * z;
+    const Ez = E0 + dipoleFactor * (3 * z * z - rEff * rEff);
+
+    return {
+      phi: -E0 * z + C * E0 * a3 * z / (rEff * rEff * rEff),
+      Ex: Ex, Ey: Ey, Ez: Ez,
+      Dx: epsOut * Ex, Dy: epsOut * Ey, Dz: epsOut * Ez,
+    };
+  }
+
   // ─── Model Registry ───────────────────────────────────────────────
 
   const models = {
@@ -317,6 +381,7 @@ const Physics = (function () {
         en:  "Eₙ 在 z=0 处跳变，比值 = ε₂/ε₁",
         dn:  "Dₙ 在 z=0 处连续（无自由电荷）",
       },
+      uiLabels: { epsSection: "介质参数", eps1: "ε₁ (上半空间)", eps2: "ε₂ (下半空间)", source: "电荷量 q" },
     },
     conductor: {
       id: "conductor",
@@ -329,6 +394,7 @@ const Physics = (function () {
         en:  "Eₙ 在导体内部为零（静电平衡）",
         dn:  "Dₙ 在导体内部为零",
       },
+      uiLabels: { epsSection: "介质参数", eps1: "ε₁ (上半空间)", eps2: "ε₂ (下半空间)", source: "电荷量 q" },
     },
     charged: {
       id: "charged",
@@ -369,6 +435,20 @@ const Physics = (function () {
       },
       chartTitles: { phi: "势函数 φ(z) — 电压", en: "法向电场 Eₙ(z)", dn: "法向电流密度 Jₙ(z)" },
       uiLabels: { epsSection: "电导率参数", eps1: "σ₁ (上半空间)", eps2: "σ₂ (下半空间)", source: "电流强度 I" },
+    },
+    sphere: {
+      id: "sphere",
+      name: "均匀电场 + 介质球",
+      subtitle: "球谐展开 · 去极化因子 L=1/3 · 内部均匀场",
+      params: ["epsilon1", "epsilon2", "charge", "chargePos"],
+      computeField: _computeSphere,
+      chartSubtitles: {
+        phi: "φ 在 r=a 处连续",
+        en:  "Eₙ 在球面跳变，内部为均匀场",
+        dn:  "Dₙ 在球面连续（无自由电荷）",
+      },
+      chartTitles: { phi: "势函数 φ(z) — 沿 z 轴", en: "法向电场 E(z)", dn: "法向电位移 D(z)" },
+      uiLabels: { epsSection: "介质参数", eps1: "ε_in (球内)", eps2: "ε_out (球外)", source: "外电场强度 E₀" },
     },
   };
 

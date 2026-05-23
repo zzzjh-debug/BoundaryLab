@@ -24,10 +24,12 @@ import * as THREE from "three";
     charged:     ["epsilon1", "epsilon2", "sigma_f", "charge", "chargePos"],
     linecharge:  ["epsilon1", "epsilon2",             "charge", "chargePos"],
     current:     ["epsilon1", "epsilon2",             "charge", "chargePos"],
+    sphere:      ["epsilon1", "epsilon2",             "charge"],
   };
 
-  // Models where y₀ is meaningless (line charge is infinite along y)
+  // Models where source position is meaningless
   const MODELS_NO_Y0 = { linecharge: true };
+  const MODELS_NO_POS = { sphere: true };
 
   function applyModelVisibility(modelId) {
     var vis = MODEL_PARAMS[modelId] || MODEL_PARAMS.dielectric;
@@ -35,7 +37,9 @@ import * as THREE from "three";
     show("field-eps1",  vis.indexOf("epsilon1") >= 0);
     show("field-eps2",  vis.indexOf("epsilon2") >= 0);
     show("field-sigma", vis.indexOf("sigma_f") >= 0);
-    show("field-y0",    !MODELS_NO_Y0[modelId]);
+    show("field-y0",    !MODELS_NO_Y0[modelId] && !MODELS_NO_POS[modelId]);
+    show("field-z0",    !MODELS_NO_POS[modelId]);
+    show("field-x0",    !MODELS_NO_POS[modelId]);
 
     // Update labels to match model physics
     var meta = Physics.getModelMeta(modelId);
@@ -205,7 +209,10 @@ import * as THREE from "three";
     var meta = Physics.getModelMeta();
     document.getElementById("model-subtitle").textContent = meta.name;
     applyModelVisibility(modelId);
-    if (window.ThreeView) window.ThreeView.setSourceStyle(modelId);
+    if (window.ThreeView) {
+      window.ThreeView.setSourceStyle(modelId);
+      window.ThreeView.setDielectricSphere(modelId === "sphere");
+    }
     if (window.Profiles) {
       window.Profiles.setSubtitles(meta.chartSubtitles);
       if (meta.chartTitles) window.Profiles.setChartTitles(meta.chartTitles);
@@ -224,7 +231,7 @@ import * as THREE from "three";
 
   // ====== Refresh ======
   function refresh() {
-    if (window.ThreeView) window.ThreeView.update(params, display);
+    if (window.ThreeView) window.ThreeView.update(params, Object.assign({}, display, { modelId: activeModel }));
     if (window.Profiles) updateProfiles();
     updateHeatmaps();
   }
@@ -252,7 +259,7 @@ import * as THREE from "three";
     try { window.ThreeView.setSourceStyle(activeModel); } catch (e) { console.error(e); }
 
     requestAnimationFrame(function () {
-      try { window.ThreeView.update(params, display); } catch (e) { console.error(e); }
+      try { window.ThreeView.update(params, Object.assign({}, display, { modelId: activeModel })); } catch (e) { console.error(e); }
     });
 
     var probeEl = document.getElementById("probe-values");
