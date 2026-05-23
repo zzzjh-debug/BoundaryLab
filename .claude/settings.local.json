@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__plugin_agentmemory_agentmemory__memory_smart_search",
+      "mcp__plugin_agentmemory_agentmemory__memory_save",
+      "mcp__plugin_agentmemory_agentmemory__memory_recall"
+    ]
+  }
+}

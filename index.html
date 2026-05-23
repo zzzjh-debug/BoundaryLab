@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BoundryLab — 电磁场边界效应可视化</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="app">
+  <!-- ====== 左侧：参数控制区 ====== -->
+  <aside id="panel">
+    <h1>BoundryLab</h1>
+    <p class="subtitle">点电荷 + 介质分界面</p>
+
+    <section class="group">
+      <h2>介质参数</h2>
+      <div class="field">
+        <label>ε₁ (上半空间) <span class="val" id="val-eps1">1.0</span></label>
+        <input type="range" id="slider-eps1" min="0.5" max="10" step="0.1" value="1.0" />
+      </div>
+      <div class="field">
+        <label>ε₂ (下半空间) <span class="val" id="val-eps2">4.0</span></label>
+        <input type="range" id="slider-eps2" min="0.5" max="10" step="0.1" value="4.0" />
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>源参数</h2>
+      <div class="field">
+        <label>电荷量 q <span class="val" id="val-q">1.0</span></label>
+        <input type="range" id="slider-q" min="0.1" max="5" step="0.1" value="1.0" />
+      </div>
+      <div class="field">
+        <label>电荷位置 z₀ <span class="val" id="val-z0">1.0</span></label>
+        <input type="range" id="slider-z0" min="0.1" max="3" step="0.05" value="1.0" />
+      </div>
+      <div class="field">
+        <label>电荷位置 x₀ <span class="val" id="val-x0">0.0</span></label>
+        <input type="range" id="slider-x0" min="-2" max="2" step="0.05" value="0.0" />
+      </div>
+      <div class="field">
+        <label>电荷位置 y₀ <span class="val" id="val-y0">0.0</span></label>
+        <input type="range" id="slider-y0" min="-2" max="2" step="0.05" value="0.0" />
+      </div>
+    </section>
+
+    <section class="group">
+      <h2>显示模式</h2>
+      <div class="field checkbox">
+        <label><input type="radio" name="fieldMode" value="all" id="radio-all" checked /> 显示全部电场线</label>
+      </div>
+      <div class="field checkbox">
+        <label><input type="radio" name="fieldMode" value="y0" id="radio-y0" /> 仅显示 y=0 平面电场线</label>
+      </div>
+    </section>
+
+    <section class="group" id="probe-info">
+      <h2>探针数据</h2>
+      <div id="probe-values">
+        <span class="hint">鼠标悬停 3D 视图</span>
+      </div>
+    </section>
+  </aside>
+
+  <!-- ====== 右侧 ====== -->
+  <main id="main">
+    <!-- 上部：3D视图 + 热力图 -->
+    <div id="upper-row">
+      <div id="view3d-container">
+        <canvas id="view3d"></canvas>
+      </div>
+      <div id="heatmap-panel">
+        <div class="hm-card">
+          <canvas id="heatmap-y0"></canvas>
+          <div class="hm-title">φ(x, 0, z) — y=0 竖直切面</div>
+        </div>
+        <div class="hm-card">
+          <canvas id="heatmap-z0"></canvas>
+          <div class="hm-title">φ(x, y, 0) — z=0 分界面</div>
+        </div>
+      </div>
+    </div>
+    <!-- 下部：剖面图 -->
+    <div id="profiles-container">
+      <div class="chart-wrap"><canvas id="chart-phi"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-en"></canvas></div>
+      <div class="chart-wrap"><canvas id="chart-dn"></canvas></div>
+    </div>
+  </main>
+</div>
+
+<!-- Dependencies -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- Application modules — loaded in dependency order -->
+<script src="js/physics.js"></script>
+<script src="js/profiles.js"></script>
+<script src="js/probe.js"></script>
+<script type="module" src="js/threeView.js"></script>
+<script type="module" src="js/main.js"></script>
+
+</body>
+</html>
