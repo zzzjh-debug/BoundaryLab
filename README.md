@@ -2,6 +2,8 @@
 
 交互式网页系统，用于可视化**点电荷在介质分界面处的电磁场行为**。核心展示：势函数 φ 连续、法向电场 Eₙ 跳变、法向电位移 Dₙ 连续、电场线折射。
 
+**在线访问：[https://zzzjh-debug.github.io/BoundryLab/](https://zzzjh-debug.github.io/BoundryLab/)**
+
 ## 运行方式
 
 ```bash
