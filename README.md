@@ -1,10 +1,10 @@
-# BoundryLab — 电磁场边界效应可视化
+# BoundaryLab — 电磁场边界效应可视化
 
 交互式网页系统，用于可视化**点电荷在介质分界面处的电磁场行为**。核心展示：势函数 φ 连续、法向电场 Eₙ 跳变、法向电位移 Dₙ 连续、电场线折射。
 
-**在线访问：[https://zzzjh-debug.github.io/BoundryLab/](https://zzzjh-debug.github.io/BoundryLab/)**
+**在线访问：[https://zzzjh-debug.github.io/BoundaryLab/](https://zzzjh-debug.github.io/BoundaryLab/)**
 
-> 本项目已开源在 GitHub，搜索 **BoundryLab** 或 **电磁场边界效应可视化** 即可找到。仓库地址：[zzzjh-debug/BoundryLab](https://github.com/zzzjh-debug/BoundryLab)
+> 本项目已开源在 GitHub，搜索 **BoundaryLab** 或 **电磁场边界效应可视化** 即可找到。仓库地址：[zzzjh-debug/BoundaryLab](https://github.com/zzzjh-debug/BoundaryLab)
 
 ## 运行方式
 
@@ -19,7 +19,7 @@ npx serve .
 
 ## 部署与更新
 
-项目托管在 GitHub Pages，域名 `zzzjh-debug.github.io/BoundryLab`。当前机器已配置 SSH 免密推送（`~/.ssh/id_ed25519_boundrylab`）。
+项目托管在 GitHub Pages，域名 `zzzjh-debug.github.io/BoundaryLab`。当前机器已配置 SSH 免密推送（`~/.ssh/id_ed25519_boundrylab`）。
 
 **修改后更新网站：**
 ```bash
@@ -32,7 +32,7 @@ git push
 推送后约 1 分钟自动部署到线上，刷新链接即可看到更新。
 
 **首次在新电脑上部署：**
-1. `git clone git@github.com:zzzjh-debug/BoundryLab.git`
+1. `git clone git@github.com:zzzjh-debug/BoundaryLab.git`
 2. 如无法 SSH 连接 GitHub，在 `~/.ssh/config` 中添加：
    ```
    Host github.com
