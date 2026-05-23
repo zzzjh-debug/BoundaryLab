@@ -62,20 +62,32 @@ const ThreeView = (function () {
     // Filter to y=0 plane only if requested
     const filtered = y0Only ? seeds.filter(s => Math.abs(s.y) < 0.01) : seeds;
 
-	    // Sphere model: seeds on sphere surface
+	    // Sphere model: 3D seeds on sphere surface (Fibonacci sphere)
 	    if (modelId === "sphere") {
 	      const sphereSeeds = [];
 	      const a = 1.0;
-	      const nSph = 36;
-	      // Outside seeds (r = a + δ)
-	      for (let i = 0; i < nSph; i++) {
-	        const ang = (i / nSph) * Math.PI * 2;
-	        sphereSeeds.push(new THREE.Vector3((a + 0.06) * Math.cos(ang), 0, (a + 0.06) * Math.sin(ang)));
+	      const nS3D = 180;
+	      const golden = Math.PI * (3 - Math.sqrt(5));
+	      // Outside seeds: uniform on sphere r = a + δ
+	      for (let i = 0; i < nS3D; i++) {
+	        const theta = golden * i;
+	        const phi = Math.acos(1 - 2 * (i + 0.5) / nS3D);
+	        const r = a + 0.06;
+	        sphereSeeds.push(new THREE.Vector3(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi)));
 	      }
-	      // Inside seeds (r = a - δ)
-	      for (let i = 0; i < nSph; i++) {
-	        const ang = (i / nSph) * Math.PI * 2 + Math.PI / nSph;
-	        sphereSeeds.push(new THREE.Vector3((a - 0.06) * Math.cos(ang), 0, (a - 0.06) * Math.sin(ang)));
+	      // Inside seeds: uniform on sphere r = a - δ
+	      for (let i = 0; i < nS3D; i++) {
+	        const theta = golden * (i + 0.5);
+	        const phi = Math.acos(1 - 2 * (i + 0.5) / nS3D);
+	        const r = a - 0.06;
+	        sphereSeeds.push(new THREE.Vector3(r * Math.sin(phi) * Math.cos(theta), r * Math.sin(phi) * Math.sin(theta), r * Math.cos(phi)));
+	      }
+	      // Bonus x-z plane seeds for y0Only cross-section view
+	      const nXZ = 48;
+	      for (let i = 0; i < nXZ; i++) {
+	        const ang = (i / nXZ) * Math.PI * 2;
+	        sphereSeeds.push(new THREE.Vector3((a + 0.04) * Math.cos(ang), 0, (a + 0.04) * Math.sin(ang)));
+	        sphereSeeds.push(new THREE.Vector3((a - 0.04) * Math.cos(ang), 0, (a - 0.04) * Math.sin(ang)));
 	      }
 	      seeds.length = 0;
 	      seeds.push.apply(seeds, sphereSeeds);
