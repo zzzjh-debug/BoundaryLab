@@ -367,6 +367,7 @@ const Physics = (function () {
         en:  "Eₙ 在 z=0 处跳变，比值 = σ₂/σ₁",
         dn:  "Jₙ 在 z=0 处连续（无电流源 at 界面）",
       },
+      chartTitles: { phi: "势函数 φ(z) — 电压", en: "法向电场 Eₙ(z)", dn: "法向电流密度 Jₙ(z)" },
       uiLabels: { epsSection: "电导率参数", eps1: "σ₁ (上半空间)", eps2: "σ₂ (下半空间)", source: "电流强度 I" },
     },
   };
@@ -383,7 +384,7 @@ const Physics = (function () {
 
   function getModelMeta(id) {
     const m = models[id || _activeModel];
-    return { id: m.id, name: m.name, subtitle: m.subtitle, params: m.params, chartSubtitles: m.chartSubtitles, uiLabels: m.uiLabels };
+    return { id: m.id, name: m.name, subtitle: m.subtitle, params: m.params, chartSubtitles: m.chartSubtitles, chartTitles: m.chartTitles, uiLabels: m.uiLabels };
   }
 
   function getAllModels() {

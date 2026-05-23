@@ -14,10 +14,17 @@ const Profiles = (function () {
 
   function setSubtitles(subtitles) {
     if (subtitles) _subtitles = subtitles;
-    // Trigger redraw of all charts so subtitle plugin picks up new text
     if (charts.phi) charts.phi.draw();
     if (charts.en) charts.en.draw();
     if (charts.dn) charts.dn.draw();
+  }
+
+  function setChartTitles(titles) {
+    // Update main chart titles (e.g. Dₙ → Jₙ for current model)
+    if (!titles) return;
+    if (titles.phi && charts.phi) { charts.phi.options.plugins.title.text = titles.phi; charts.phi.update("none"); }
+    if (titles.en  && charts.en)  { charts.en.options.plugins.title.text  = titles.en;  charts.en.update("none"); }
+    if (titles.dn  && charts.dn)  { charts.dn.options.plugins.title.text  = titles.dn;  charts.dn.update("none"); }
   }
 
   function init() {
@@ -143,7 +150,7 @@ const Profiles = (function () {
     charts.dn.update("none");
   }
 
-  return { init: init, update: update, setSubtitles: setSubtitles };
+  return { init: init, update: update, setSubtitles: setSubtitles, setChartTitles: setChartTitles };
 })();
 
 window.Profiles = Profiles;

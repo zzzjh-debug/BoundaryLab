@@ -205,7 +205,12 @@ import * as THREE from "three";
     var meta = Physics.getModelMeta();
     document.getElementById("model-subtitle").textContent = meta.name;
     applyModelVisibility(modelId);
-    if (window.Profiles) window.Profiles.setSubtitles(meta.chartSubtitles);
+    if (window.ThreeView) window.ThreeView.setSourceStyle(modelId);
+    if (window.Profiles) {
+      window.Profiles.setSubtitles(meta.chartSubtitles);
+      if (meta.chartTitles) window.Profiles.setChartTitles(meta.chartTitles);
+      else window.Profiles.setChartTitles({ phi: "势函数 φ(z)", en: "法向电场 Eₙ(z)", dn: "法向电位移 Dₙ(z)" });
+    }
     refresh();
   }
 
@@ -236,7 +241,7 @@ import * as THREE from "three";
     if (typeof Physics === "undefined" || typeof Profiles === "undefined" || typeof Probe === "undefined") return;
     Physics.setModel(activeModel);
     applyModelVisibility(activeModel);
-    try { Profiles.init(); var meta = Physics.getModelMeta(); Profiles.setSubtitles(meta.chartSubtitles); updateProfiles(); } catch (e) { console.error(e); }
+    try { Profiles.init(); var meta = Physics.getModelMeta(); Profiles.setSubtitles(meta.chartSubtitles); if (meta.chartTitles) Profiles.setChartTitles(meta.chartTitles); updateProfiles(); } catch (e) { console.error(e); }
     try { updateHeatmaps(); } catch (e) { console.error(e); }
 
     var ctr = document.getElementById("view3d-container");
@@ -244,6 +249,7 @@ import * as THREE from "three";
     if (!ctr || !cvs) return;
 
     try { window.ThreeView.init(ctr, cvs); } catch (e) { console.error(e); }
+    try { window.ThreeView.setSourceStyle(activeModel); } catch (e) { console.error(e); }
 
     requestAnimationFrame(function () {
       try { window.ThreeView.update(params, display); } catch (e) { console.error(e); }

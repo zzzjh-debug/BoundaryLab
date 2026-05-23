@@ -9,7 +9,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 const ThreeView = (function () {
   let renderer, scene, camera, controls;
   let container, canvas;
-  let chargeSphere, probeSphere;
+  let chargeSphere, probeSphere, lineSource, currentSphere;
   let eShafts, eHeads;
   let animFrameId, resizeObserver;
   let _initialized = false;
@@ -249,6 +249,15 @@ const ThreeView = (function () {
     const cGeo = new THREE.SphereGeometry(0.14, 20, 20);
     chargeSphere = new THREE.Mesh(cGeo, new THREE.MeshPhongMaterial({ color: 0xf85149, emissive: 0x801010 }));
     scene.add(chargeSphere);
+    // Line charge cylinder (orange, Model 4) -- hidden by default
+    const lineGeo = new THREE.CylinderGeometry(0.06, 0.06, 6.0, 16, 1);
+    lineSource = new THREE.Mesh(lineGeo, new THREE.MeshPhongMaterial({ color: 0xf0883e, emissive: 0x802010 }));
+    lineSource.visible = false; scene.add(lineSource);
+
+    // Current source sphere (gold, Model 5) -- hidden by default
+    const curGeo = new THREE.SphereGeometry(0.14, 20, 20);
+    currentSphere = new THREE.Mesh(curGeo, new THREE.MeshPhongMaterial({ color: 0xf0c030, emissive: 0x804000 }));
+    currentSphere.visible = false; scene.add(currentSphere);
 
     const pGeo = new THREE.SphereGeometry(0.06, 12, 12);
     probeSphere = new THREE.Mesh(pGeo, new THREE.MeshPhongMaterial({ color: 0xffff00, emissive: 0x404000 }));
@@ -278,6 +287,8 @@ const ThreeView = (function () {
   function update(params, opts) {
     if (!_initialized) return;
     chargeSphere.position.set(params.chargePos.x, params.chargePos.y, params.chargePos.z);
+    if (lineSource) lineSource.position.set(params.chargePos.x, params.chargePos.y, params.chargePos.z);
+    if (currentSphere) currentSphere.position.set(params.chargePos.x, params.chargePos.y, params.chargePos.z);
     buildFieldArrows(params, true, opts.y0Only);
   }
 
@@ -295,7 +306,21 @@ const ThreeView = (function () {
     else { probeSphere.visible = false; }
   }
 
-  return { init, update, intersectY0, setProbePosition };
+  function setSourceStyle(modelId) {
+    if (!_initialized) return;
+    chargeSphere.visible = false;
+    if (lineSource) lineSource.visible = false;
+    if (currentSphere) currentSphere.visible = false;
+    if (modelId === "linecharge") {
+      if (lineSource) lineSource.visible = true;
+    } else if (modelId === "current") {
+      if (currentSphere) currentSphere.visible = true;
+    } else {
+      chargeSphere.visible = true;
+    }
+  }
+
+  return { init, update, intersectY0, setProbePosition, setSourceStyle };
 })();
 
 window.ThreeView = ThreeView;
