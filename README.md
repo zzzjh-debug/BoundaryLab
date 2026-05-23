@@ -4,6 +4,8 @@
 
 **在线访问：[https://zzzjh-debug.github.io/BoundryLab/](https://zzzjh-debug.github.io/BoundryLab/)**
 
+> 本项目已开源在 GitHub，搜索 **BoundryLab** 或 **电磁场边界效应可视化** 即可找到。仓库地址：[zzzjh-debug/BoundryLab](https://github.com/zzzjh-debug/BoundryLab)
+
 ## 运行方式
 
 ```bash
