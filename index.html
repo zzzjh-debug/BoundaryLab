@@ -42,6 +42,10 @@
           <input type="radio" name="activeModel" value="sphere" />
           <span>均匀电场 + 介质球</span>
         </label>
+        <label class="radio-label">
+          <input type="radio" name="activeModel" value="magdipole" />
+          <span>磁偶极子 + 磁导率分界面</span>
+        </label>
       </div>
     </section>
 
@@ -80,6 +84,14 @@
       <div class="field" id="field-y0">
         <label>电荷位置 y<sub>0</sub> <span class="val" id="val-y0">0.0</span></label>
         <input type="range" id="slider-y0" min="-2" max="2" step="0.05" value="0.0" />
+      </div>
+    </section>
+
+    <section class="group" id="group-anim">
+      <h2>参数动画</h2>
+      <div class="field" style="display:flex;align-items:center;gap:8px">
+        <button id="btn-anim" class="anim-btn">▶ 播放</button>
+        <span style="font-size:11px;color:var(--text-dim)">z₀ 往复扫描</span>
       </div>
     </section>
 

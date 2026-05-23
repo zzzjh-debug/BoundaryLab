@@ -25,6 +25,7 @@ import * as THREE from "three";
     linecharge:  ["epsilon1", "epsilon2",             "charge", "chargePos"],
     current:     ["epsilon1", "epsilon2",             "charge", "chargePos"],
     sphere:      ["epsilon1", "epsilon2",             "charge"],
+    magdipole:   ["epsilon1", "epsilon2",             "charge", "chargePos"],
   };
 
   // Models where source position is meaningless
@@ -216,6 +217,44 @@ import * as THREE from "three";
       else window.Profiles.setChartTitles({ phi: "势函数 φ(z)", en: "法向电场 Eₙ(z)", dn: "法向电位移 Dₙ(z)" });
     }
     refresh();
+  }
+
+  // ====== Parameter Animation ======
+  var animRunning = false;
+  var animDir = 1;
+  var animZ0 = params.chargePos.z;
+  var animFrameId = null;
+
+  function animStep() {
+    if (!animRunning) return;
+    var zMin = 0.15, zMax = 2.8, speed = 0.008;
+    animZ0 += animDir * speed;
+    if (animZ0 >= zMax) { animZ0 = zMax; animDir = -1; }
+    if (animZ0 <= zMin) { animZ0 = zMin; animDir = 1; }
+    params.chargePos.z = animZ0;
+    var slider = document.getElementById("slider-z0");
+    var valEl = document.getElementById("val-z0");
+    if (slider) slider.value = animZ0;
+    if (valEl) valEl.textContent = animZ0.toFixed(2);
+    refresh();
+    animFrameId = requestAnimationFrame(animStep);
+  }
+
+  var animBtn = document.getElementById("btn-anim");
+  if (animBtn) {
+    animBtn.addEventListener("click", function () {
+      animRunning = !animRunning;
+      if (animRunning) {
+        animBtn.textContent = "⏸ 暂停";
+        animBtn.classList.add("playing");
+        animZ0 = params.chargePos.z; // start from current position
+        animFrameId = requestAnimationFrame(animStep);
+      } else {
+        animBtn.textContent = "▶ 播放";
+        animBtn.classList.remove("playing");
+        if (animFrameId) cancelAnimationFrame(animFrameId);
+      }
+    });
   }
 
   // Radio buttons for display mode

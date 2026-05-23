@@ -304,6 +304,90 @@ const Physics = (function () {
   }
 
   /**
+   * Model 8: z-oriented magnetic dipole m above a planar permeability interface.
+   *
+   * Magnetostatic dual to electrostatics, with a crucial sign difference:
+   *   BC: Bₙ continuous, Hₜ continuous  (B ↔ D, H ↔ E)
+   *
+   * Image dipole:  m' = m·(μ₂−μ₁)/(μ₁+μ₂)   [note: reversed from dielectric!]
+   * Transmitted:   m'' = m·2μ₁/(μ₁+μ₂)
+   *
+   * The scalar potential φ_m (H = −∇φ_m) satisfies the same Laplace equation
+   * as electrostatics, but the sign of the image coefficient is flipped because
+   * Bₙ (not Hₙ) is continuous — the roles of normal and tangential components swap.
+   *
+   * For z ≥ 0 (μ₁): H = H_dipole(m) + H_dipole(m')
+   * For z < 0 (μ₂): H = H_dipole(m'')
+   * B = μH in each region.
+   *
+   * The return values map: phi → φ_m,  E → H,  D → B.
+   */
+  function _computeMagneticDipole(x, y, z, p) {
+    const mu1 = p.epsilon1;   // μ₁
+    const mu2 = p.epsilon2;   // μ₂
+    const m = p.charge || 1.0; // magnetic dipole moment
+    const cp = p.chargePos;
+
+    const dx = x - cp.x;
+    const dy = y - cp.y;
+    const dz = z - cp.z;
+    const R2 = dx * dx + dy * dy + dz * dz;
+    const R = Math.sqrt(R2);
+    const Reff = Math.max(R, 0.02);
+    const Reff5 = Reff * Reff * Reff * Reff * Reff;
+
+    // H-field of a z-oriented dipole: H = (1/4π)[3(m·r̂)r̂ − m]/r³
+    // H_x = (3m/4π) xz/r⁵,  H_y = (3m/4π) yz/r⁵,  H_z = (m/4π)(3z²−r²)/r⁵
+    function dipoleH(mag, ddx, ddy, ddz, r5) {
+      const co = mag / (4 * Math.PI);
+      return {
+        Hx: 3 * co * ddx * ddz / r5,
+        Hy: 3 * co * ddy * ddz / r5,
+        Hz: co * (3 * ddz * ddz - (ddx * ddx + ddy * ddy + ddz * ddz)) / r5,
+      };
+    }
+
+    let Hx, Hy, Hz, phi_m, mu;
+
+    if (z >= 0) {
+      mu = mu1;
+      // Image dipole moment (note reversed sign vs dielectric)
+      const mImg = m * (mu2 - mu1) / (mu1 + mu2);
+      const dzImg = z + cp.z;
+      const Rimg2 = dx * dx + dy * dy + dzImg * dzImg;
+      const Rimg = Math.sqrt(Rimg2);
+      const RimgEff = Math.max(Rimg, 0.02);
+      const RimgEff5 = RimgEff * RimgEff * RimgEff * RimgEff * RimgEff;
+
+      const hReal = dipoleH(m, dx, dy, dz, Reff5);
+      const hImg  = dipoleH(mImg, dx, dy, dzImg, RimgEff5);
+
+      Hx = hReal.Hx + hImg.Hx;
+      Hy = hReal.Hy + hImg.Hy;
+      Hz = hReal.Hz + hImg.Hz;
+
+      // Scalar potential: φ_m = (1/4π)[m(z−z₀)/R³ + m'(z+z₀)/R'³]
+      phi_m = (m * dz / (Reff * Reff * Reff) + mImg * dzImg / (RimgEff * RimgEff * RimgEff)) / (4 * Math.PI);
+    } else {
+      mu = mu2;
+      const mTrans = m * 2 * mu1 / (mu1 + mu2);
+
+      const hTrans = dipoleH(mTrans, dx, dy, dz, Reff5);
+      Hx = hTrans.Hx;
+      Hy = hTrans.Hy;
+      Hz = hTrans.Hz;
+
+      phi_m = mTrans * dz / (Reff * Reff * Reff) / (4 * Math.PI);
+    }
+
+    return {
+      phi: phi_m,
+      Ex: Hx, Ey: Hy, Ez: Hz,
+      Dx: mu * Hx, Dy: mu * Hy, Dz: mu * Hz,
+    };
+  }
+
+  /**
    * Model 6: Uniform electric field E₀ (along +z) applied to a dielectric sphere.
    *
    * Sphere: radius a, permittivity ε_in, centered at origin.
@@ -449,6 +533,20 @@ const Physics = (function () {
       },
       chartTitles: { phi: "势函数 φ(z) — 沿 z 轴", en: "法向电场 E(z)", dn: "法向电位移 D(z)" },
       uiLabels: { epsSection: "介质参数", eps1: "ε_in (球内)", eps2: "ε_out (球外)", source: "外电场强度 E₀" },
+    },
+    magdipole: {
+      id: "magdipole",
+      name: "磁偶极子 + 磁导率分界面",
+      subtitle: "镜像法 · Bₙ连续 Hₜ连续 · 磁静电对偶",
+      params: ["epsilon1", "epsilon2", "charge", "chargePos"],
+      computeField: _computeMagneticDipole,
+      chartSubtitles: {
+        phi: "φ_m (磁标势) 在 z=0 处连续",
+        en:  "Hₙ 在 z=0 处跳变，比值 = μ₂/μ₁",
+        dn:  "Bₙ 在 z=0 处连续（无磁单极）",
+      },
+      chartTitles: { phi: "磁标势 φ_m(z)", en: "磁场强度 H(z)", dn: "磁通密度 B(z)" },
+      uiLabels: { epsSection: "磁导率参数", eps1: "μ₁ (上半空间)", eps2: "μ₂ (下半空间)", source: "磁偶极矩 m" },
     },
   };
 
