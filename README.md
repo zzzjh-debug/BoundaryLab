@@ -1,25 +1,46 @@
 # BoundaryLab — Electromagnetic Boundary Effect Visualization
 
-An interactive web-based visualization of a point charge near a dielectric interface, demonstrating fundamental electromagnetic boundary conditions.
+An interactive web-based laboratory for exploring electromagnetic boundary conditions across **7 physical models** — from planar dielectric interfaces to spherical geometries, from electrostatics to magnetostatics and DC current flow.
 
 **Live Demo: [zzzjh-debug.github.io/BoundaryLab](https://zzzjh-debug.github.io/BoundaryLab/)**
 
+## Models
+
+| # | Model | Source | Interface | Key Physics |
+|---|-------|--------|-----------|-------------|
+| 1 | Point charge + dielectric | q | Planar ε₁/ε₂ | φ continuous, Dₙ continuous, Eₙ jumps |
+| 2 | Point charge + grounded conductor | q | Planar / PEC | φ=0 (Dirichlet BC), induced σ |
+| 3 | Charged dielectric interface | q + σ_f | Planar ε₁/ε₂ | **D₁ₙ−D₂ₙ=σ_f** (general form) |
+| 4 | Line charge + dielectric | λ (∞ line) | Planar ε₁/ε₂ | 2D logarithmic potential, E~1/r |
+| 5 | DC current + conductivity | I (point) | Planar σ₁/σ₂ | ε↔σ duality, **Jₙ continuous, Jₜ jumps** |
+| 6 | Uniform E-field + dielectric sphere | E₀ | Spherical ε_in/ε_out | Internal uniform field, L=1/3 |
+| 7 | Magnetic dipole + permeability | m ẑ | Planar μ₁/μ₂ | **Bₙ continuous, Hₜ continuous**, m' sign reversal |
+
+Each model has dedicated chart annotations showing the relevant boundary condition formulas.
+
 ## Features
 
-- **3D Field Line Tracing** — Euler-integrated field lines with arrow markers, rendered via Three.js
-- **Profile Charts** — φ(z), Eₙ(z), Dₙ(z) cross-sectional plots with boundary condition annotations (Chart.js)
-- **Probe System** — click anywhere on the interface plane to inspect local field values (φ, Eₙ, Eₜ, Dₙ, Dₜ)
-- **2D Heatmaps** — potential distribution φ(x,0,z) and φ(x,y,0) in real time
-- **Interactive Parameters** — tunable ε₁, ε₂, charge magnitude, and charge position via sliders
+- **3D Field Line Tracing** — Euler-integrated with arrow markers (Three.js InstancedMesh)
+- **Profile Charts** — φ(z), Eₙ/Hₙ(z), Dₙ/Bₙ/Jₙ(z) with dynamic titles and BC annotations (Chart.js)
+- **2D Heatmaps** — potential distribution with percentile color scale and colorbar legend
+- **Probe System** — mouse-over the 3D view to inspect local field values; data persists on mouse-leave
+- **Source Visualization** — model-specific source rendering (point sphere, line cylinder, current sphere, dielectric sphere)
+- **Parameter Animation** — auto-sweep z₀ with play/pause
 
 ### Physics Demonstrated
 
-| Quantity | Behavior at z=0 | Verification |
-|----------|----------------|--------------|
-| φ | Continuous | Smooth φ(z) curve; equal probe values across interface |
-| Eₙ | Jumps, ratio = ε₂/ε₁ | Discontinuity in Eₙ(z); probe ratio matches |
-| Dₙ | Continuous | Smooth Dₙ(z) curve; equal probe values across interface |
-| Field lines | Refract, tanθ₁/tanθ₂ = ε₁/ε₂ | Visible bending at z=0 in 3D view |
+| Boundary Condition | Shown In |
+|-------------------|----------|
+| φ continuous | Models 1,3,4,5,6,7,8 |
+| Dₙ continuous (σ_f=0) | Models 1,4,6 |
+| D₁ₙ−D₂ₙ = σ_f | Model 3 |
+| φ=0 (Dirichlet) | Model 2 |
+| Jₙ continuous, Jₜ jumps | Model 5 |
+| Bₙ continuous, Hₜ continuous | Model 8 |
+| Field line refraction | Models 1,4,5,8 |
+| Depolarization (spherical) | Model 6 |
+| ε↔σ duality | Model 5 |
+| m' sign reversal (μ₂−μ₁) | Model 8 |
 
 ## Quick Start
 
@@ -27,7 +48,7 @@ An interactive web-based visualization of a point charge near a dielectric inter
 npx serve .
 ```
 
-Open the URL printed in the terminal (default `http://localhost:3000`). No dependencies to install — pure static HTML, CSS, and JavaScript with CDN-loaded Three.js and Chart.js.
+Open the URL (default `http://localhost:3000`). Zero dependencies — pure static HTML/CSS/JS with CDN-loaded Three.js 0.160 and Chart.js 4.4.
 
 ## Project Structure
 
@@ -37,21 +58,19 @@ BoundaryLab/
 ├── css/
 │   └── style.css        # Styles
 ├── js/
-│   ├── physics.js       # Method of images engine
+│   ├── physics.js       # 7-model physics engine (method of images, spherical harmonics)
 │   ├── threeView.js     # 3D visualization & field line tracing
 │   ├── profiles.js      # Cross-section charts (Chart.js)
 │   ├── probe.js         # Interface probe system
-│   └── main.js          # State management & heatmaps
+│   └── main.js          # State management, heatmaps, animation
 └── .gitignore
 ```
-
-**7 source files** — ~1500 lines of vanilla JavaScript.
 
 ## Tech Stack
 
 - [Three.js 0.160](https://threejs.org/) — 3D rendering
 - [Chart.js 4.4](https://www.chartjs.org/) — 2D profile charts
-- Pure HTML/CSS/JS, zero build step
+- Pure HTML/CSS/JS, zero build step, ~2000 lines
 
 ## License
 
