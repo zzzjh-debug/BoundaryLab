@@ -41,6 +41,7 @@ import * as THREE from "three";
     show("field-y0",    !MODELS_NO_Y0[modelId] && !MODELS_NO_POS[modelId]);
     show("field-z0",    !MODELS_NO_POS[modelId]);
     show("field-x0",    !MODELS_NO_POS[modelId]);
+    show("group-anim",  !MODELS_NO_POS[modelId]);
 
     // Update labels to match model physics
     var meta = Physics.getModelMeta(modelId);
@@ -210,7 +211,10 @@ import * as THREE from "three";
     var meta = Physics.getModelMeta();
     document.getElementById("model-subtitle").textContent = meta.name;
     applyModelVisibility(modelId);
-    if (window.ThreeView) window.ThreeView.setSourceStyle(modelId);
+    if (window.ThreeView) {
+      window.ThreeView.setSourceStyle(modelId);
+      window.ThreeView.setDielectricSphere(modelId === "sphere");
+    }
     if (window.Profiles) {
       window.Profiles.setSubtitles(meta.chartSubtitles);
       if (meta.chartTitles) window.Profiles.setChartTitles(meta.chartTitles);

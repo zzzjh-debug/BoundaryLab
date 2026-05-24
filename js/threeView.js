@@ -357,6 +357,8 @@ const ThreeView = (function () {
       if (lineSource) lineSource.visible = true;
     } else if (modelId === "current") {
       if (currentSphere) currentSphere.visible = true;
+    } else if (modelId === "sphere") {
+      // No point source — uniform applied field
     } else {
       chargeSphere.visible = true;
     }
